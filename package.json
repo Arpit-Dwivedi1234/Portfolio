@@ -1,12 +1,22 @@
 {
-  "name": "arpit-dwivedi-portfolio",
+  "name": "portfolio-backend",
   "version": "1.0.0",
-  "description": "Arpit Dwivedi — Portfolio & Auth System",
-  "main": "backend/server.js",
+  "description": "Backend authentication and user management API for portfolio",
+  "main": "server.js",
+  "type": "commonjs",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "node --watch backend/server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
+  "keywords": ["portfolio", "auth", "express", "jwt", "email"],
   "author": "Arpit Dwivedi",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.13"
+  }
 }
