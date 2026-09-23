@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up — Arpit Dwivedi Portfolio</title>
+  <meta name="description" content="Register a new user account for Arpit Dwivedi portfolio." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- EmailJS SDK for direct email OTP delivery -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script type="text/javascript">
+    (function() {
+      // Initialize EmailJS with your Public Key
+      emailjs.init("GJXhUSDb9jdD9SCaJ");
+    })();
+  </script>
+</head>
+<body>
+
+  <div class="auth-wrapper">
+    <a href="index.html" class="auth-brand">
+      <div class="auth-brand-logo">AD</div>
+      <span class="auth-brand-title">Arpit Dwivedi</span>
+    </a>
+
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1 id="signupTitle">Create Account</h1>
+        <p id="signupSubtitle">Sign up to get access to your personal dashboard</p>
+      </div>
+
+      <div id="authAlert" class="auth-alert error" style="display: none;"></div>
+
+      <!-- Step 1: User Info Form -->
+      <form id="signupForm">
+        <div class="form-group">
+          <label for="name" class="form-label">Full Name</label>
+          <input 
+            type="text" 
+            id="name" 
+            name="name" 
+            class="form-input" 
+            placeholder="John Doe" 
+            required 
+            autocomplete="name"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            class="form-input" 
+            placeholder="you@example.com" 
+            required 
+            autocomplete="email"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password (min 6 chars)</label>
+          <div class="form-input-wrap">
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              class="form-input" 
+              placeholder="••••••••" 
+              required 
+              autocomplete="new-password"
+              minlength="6"
+            />
+            <button type="button" id="togglePw" class="toggle-pw-btn">SHOW</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label">Confirm Password</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            name="confirmPassword" 
+            class="form-input" 
+            placeholder="••••••••" 
+            required 
+            autocomplete="new-password"
+          />
+        </div>
+
+        <button type="submit" id="submitBtn" class="auth-btn">
+          <span>Send Verification Code</span>
+          <span class="mono">✉️</span>
+        </button>
+      </form>
+
+      <!-- Step 2: EmailJS OTP Verification Form -->
+      <div id="otpStep" style="display: none;">
+        <div class="form-group">
+          <label for="otpCode" class="form-label">Enter 6-Digit Email Code</label>
+          <input 
+            type="text" 
+            id="otpCode" 
+            class="form-input" 
+            placeholder="123456" 
+            maxlength="6"
+            style="letter-spacing: 4px; font-family: 'JetBrains Mono', monospace; font-size: 18px; text-align: center;"
+          />
+        </div>
+
+        <button type="button" id="verifyOtpBtn" class="auth-btn">
+          <span>Verify & Complete Registration</span>
+          <span class="mono">→</span>
+        </button>
+
+        <div style="text-align: center; margin-top: 14px;">
+          <button type="button" id="resendOtpBtn" class="btn-link" style="font-size: 13px; color: var(--amber); background: none; border: none; cursor: pointer; text-decoration: underline;">
+            Resend EmailJS Code
+          </button>
+        </div>
+      </div>
+
+      <div class="auth-footer-link" style="margin-top: 20px;">
+        Already have an account? <a href="login.html">Log in here</a>
+      </div>
+    </div>
+
+    <a href="index.html" class="back-home-link">← Back to Portfolio</a>
+  </div>
+
+  <script>
+    // Config & EmailJS Public Key
+    const EMAILJS_PUBLIC_KEY = "GJXhUSDb9jdD9SCaJ";
+    const EMAILJS_SERVICE_ID = "service_ptgdbyn";
+    const EMAILJS_TEMPLATE_ID = "template_xrhj8hc";
+
+    // Password visibility toggle
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const togglePwBtn = document.getElementById('togglePw');
+
+    togglePwBtn.addEventListener('click', () => {
+      const type = passwordInput.type === 'password' ? 'text' : 'password';
+      passwordInput.type = type;
+      confirmPasswordInput.type = type;
+      togglePwBtn.textContent = type === 'password' ? 'SHOW' : 'HIDE';
+    });
+
+    // Alert Helper
+    const alertBox = document.getElementById('authAlert');
+    function showAlert(message, type = 'error') {
+      alertBox.textContent = message;
+      alertBox.className = `auth-alert ${type}`;
+      alertBox.style.display = 'flex';
+    }
+    function hideAlert() {
+      alertBox.style.display = 'none';
+    }
+
+    // Redirect if already logged in
+    if (localStorage.getItem('token')) {
+      window.location.href = 'dashboard.html';
+    }
+
+    let generatedOtp = null;
+    let pendingUserData = null;
+
+    const signupForm = document.getElementById('signupForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const otpStep = document.getElementById('otpStep');
+    const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+    const resendOtpBtn = document.getElementById('resendOtpBtn');
+
+    // Helper: Send OTP Email via EmailJS & Backend API
+    async function sendOtpViaEmailJS(name, email) {
+      generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      const templateParams = {
+        to_name: name,
+        from_name: "Arpit Dwivedi Portfolio",
+        to_email: email,
+        user_email: email,
+        recipient_email: email,
+        email: email,
+        reply_to: email,
+        otp_code: generatedOtp,
+        code: generatedOtp,
+        message: `Your 6-digit account verification code is ${generatedOtp}`
+      };
+
+      let emailjsSent = false;
+      if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC_KEY) {
+        try {
+          await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+          emailjsSent = true;
+          showAlert(`✓ Verification code sent to ${email}! Check your inbox.`, 'success');
+        } catch (err) {
+          console.warn('EmailJS delivery note:', err);
+        }
+      }
+
+      if (!emailjsSent) {
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '5000'
+          ? 'http://localhost:5000/api/contact/send-otp'
+          : '/api/contact/send-otp';
+
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email })
+          });
+          const data = await response.json();
+          if (response.ok && data.success) {
+            showAlert(`✓ Verification code sent to ${email}! Check your inbox.`, 'success');
+          } else {
+            showAlert(`Failed to send verification email to ${email}. Please check the address and try again.`, 'error');
+          }
+        } catch (err) {
+          showAlert(`Failed to send verification email to ${email}. Please check your internet connection and try again.`, 'error');
+        }
+      }
+    }
+
+    // Step 1: Submit Details & Trigger EmailJS OTP
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!name || !email || !password || !confirmPassword) {
+        showAlert('Please fill in all required fields.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showAlert('Passwords do not match. Please check and try again.');
+        return;
+      }
+
+      if (password.length < 6) {
+        showAlert('Password must be at least 6 characters long.');
+        return;
+      }
+
+      pendingUserData = { name, email, password };
+      submitBtn.disabled = true;
+      submitBtn.querySelector('span').textContent = 'Sending Email Code...';
+
+      await sendOtpViaEmailJS(name, email);
+
+      // Transition to OTP Verification View
+      document.getElementById('signupTitle').textContent = 'Verify Your Email';
+      document.getElementById('signupSubtitle').textContent = `Enter the code sent to ${email}`;
+      signupForm.style.display = 'none';
+      otpStep.style.display = 'block';
+    });
+
+    // Resend OTP
+    resendOtpBtn.addEventListener('click', async () => {
+      if (!pendingUserData) return;
+      resendOtpBtn.disabled = true;
+      resendOtpBtn.textContent = 'Sending new code...';
+      await sendOtpViaEmailJS(pendingUserData.name, pendingUserData.email);
+      setTimeout(() => {
+        resendOtpBtn.disabled = false;
+        resendOtpBtn.textContent = 'Resend EmailJS Code';
+      }, 5000);
+    });
+
+    // Step 2: Verify OTP & Complete Backend Registration
+    verifyOtpBtn.addEventListener('click', async () => {
+      hideAlert();
+      const enteredOtp = document.getElementById('otpCode').value.trim();
+
+      if (!enteredOtp || enteredOtp.length !== 6) {
+        showAlert('Please enter the full 6-digit verification code.');
+        return;
+      }
+
+      if (enteredOtp !== generatedOtp) {
+        showAlert('Incorrect verification code. Please check your email and try again.');
+        return;
+      }
+
+      verifyOtpBtn.disabled = true;
+      verifyOtpBtn.querySelector('span').textContent = 'Creating Account...';
+
+      const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '5000'
+        ? 'http://localhost:5000/api/auth/signup'
+        : '/api/auth/signup';
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: pendingUserData.name, 
+            email: pendingUserData.email, 
+            password: pendingUserData.password,
+            emailVerified: true
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showAlert('✓ Email verified & Account created! Redirecting...', 'success');
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1000);
+        } else {
+          showAlert(data.message || 'Signup failed. Please try again.');
+          verifyOtpBtn.disabled = false;
+          verifyOtpBtn.querySelector('span').textContent = 'Verify & Complete Registration';
+        }
+      } catch (error) {
+        console.warn('Backend server offline, performing demo account registration:', error);
+        const demoUser = {
+          id: Date.now(),
+          name: pendingUserData.name,
+          email: pendingUserData.email,
+          role: 'User',
+          created_at: new Date().toISOString()
+        };
+        const demoToken = 'demo_jwt_token_' + Date.now();
+        localStorage.setItem('token', demoToken);
+        localStorage.setItem('user', JSON.stringify(demoUser));
+        showAlert('✓ Email verified & Account created (Demo Mode)! Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 1000);
+      }
+    });
+  </script>
+</body>
+</html>
+

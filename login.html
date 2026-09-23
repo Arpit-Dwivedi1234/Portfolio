@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Arpit Dwivedi Portfolio</title>
+  <meta name="description" content="Sign in to your Arpit Dwivedi portfolio user account." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="auth-wrapper">
+    <a href="index.html" class="auth-brand">
+      <div class="auth-brand-logo">AD</div>
+      <span class="auth-brand-title">Arpit Dwivedi</span>
+    </a>
+
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>Welcome Back</h1>
+        <p>Log in to access your portfolio dashboard</p>
+      </div>
+
+      <div id="authAlert" class="auth-alert error" style="display: none;"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            class="form-input" 
+            placeholder="you@example.com" 
+            required 
+            autocomplete="email"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <div class="form-input-wrap">
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              class="form-input" 
+              placeholder="••••••••" 
+              required 
+              autocomplete="current-password"
+            />
+            <button type="button" id="togglePw" class="toggle-pw-btn">SHOW</button>
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="auth-btn">
+          <span>Log In</span>
+          <span class="mono">→</span>
+        </button>
+      </form>
+
+      <div class="auth-footer-link">
+        Don't have an account? <a href="signup.html">Sign up now</a>
+      </div>
+    </div>
+
+    <a href="index.html" class="back-home-link">← Back to Portfolio</a>
+  </div>
+
+  <script>
+    // Password visibility toggle
+    const passwordInput = document.getElementById('password');
+    const togglePwBtn = document.getElementById('togglePw');
+
+    togglePwBtn.addEventListener('click', () => {
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        togglePwBtn.textContent = 'HIDE';
+      } else {
+        passwordInput.type = 'password';
+        togglePwBtn.textContent = 'SHOW';
+      }
+    });
+
+    // Alert Helper
+    const alertBox = document.getElementById('authAlert');
+    function showAlert(message, type = 'error') {
+      alertBox.textContent = message;
+      alertBox.className = `auth-alert ${type}`;
+      alertBox.style.display = 'flex';
+    }
+    function hideAlert() {
+      alertBox.style.display = 'none';
+    }
+
+    // Check if already logged in
+    const existingToken = localStorage.getItem('token');
+    if (existingToken) {
+      window.location.href = 'dashboard.html';
+    }
+
+    // Form submission
+    const loginForm = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showAlert('Please fill in both email and password.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.querySelector('span').textContent = 'Logging in...';
+
+      // API Endpoint URL
+      const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '5000'
+        ? 'http://localhost:5000/api/auth/login'
+        : '/api/auth/login';
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          showAlert(data.message || 'Login successful! Redirecting...', 'success');
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 800);
+        } else {
+          showAlert(data.message || 'Login failed. Please check your credentials.');
+          submitBtn.disabled = false;
+          submitBtn.querySelector('span').textContent = 'Log In';
+        }
+      } catch (error) {
+        console.warn('Backend server not reachable, attempting offline demo mode fallback:', error);
+        // Fallback demo mode if backend is not started yet
+        if (email && password.length >= 6) {
+          const demoUser = {
+            id: 1,
+            name: email.split('@')[0],
+            email: email,
+            role: 'User (Demo)',
+            created_at: new Date().toISOString()
+          };
+          const demoToken = 'demo_jwt_token_' + Date.now();
+          localStorage.setItem('token', demoToken);
+          localStorage.setItem('user', JSON.stringify(demoUser));
+          showAlert('Login successful (Demo Mode)! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 800);
+        } else {
+          showAlert('Unable to connect to authentication server. Please check your network or backend server.');
+          submitBtn.disabled = false;
+          submitBtn.querySelector('span').textContent = 'Log In';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

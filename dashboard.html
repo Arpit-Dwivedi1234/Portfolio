@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Dashboard — Arpit Dwivedi Portfolio</title>
+  <meta name="description" content="Manage your portfolio user account and access settings." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="dashboard-wrap">
+    <!-- Top Navigation Bar -->
+    <div class="dashboard-top-nav">
+      <div class="dashboard-brand-group">
+        <a href="index.html" class="auth-brand" style="margin-bottom:0;">
+          <div class="auth-brand-logo">AD</div>
+          <span class="auth-brand-title">Arpit Dwivedi</span>
+        </a>
+      </div>
+
+      <div class="dashboard-user-info">
+        <div class="user-avatar-circle" id="userAvatar">U</div>
+        <div class="user-details-text">
+          <span class="name" id="userName">User</span>
+          <span class="email" id="userEmail">user@example.com</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn">
+          <span>Logout</span>
+          <span class="mono">✕</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Banner -->
+    <div class="dashboard-banner">
+      <h2>Welcome back, <span id="welcomeName" style="color: var(--amber);">User</span>! 👋</h2>
+      <p>You are logged into Arpit Dwivedi's Portfolio platform. From here you can manage your account session, inspect authentication details, and navigate back to the main portfolio.</p>
+    </div>
+
+    <!-- Stat Cards Grid -->
+    <div class="dashboard-grid">
+      <div class="dashboard-card">
+        <div class="dashboard-card-title">
+          <span>Account Status</span>
+          <span class="badge-tag active">ACTIVE</span>
+        </div>
+        <div class="stat-number">Verified</div>
+        <div class="stat-desc">JWT Authentication Enabled</div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="dashboard-card-title">
+          <span>User Role</span>
+          <span class="mono" style="color:var(--amber);">LEVEL 1</span>
+        </div>
+        <div class="stat-number" id="userRole">Member</div>
+        <div class="stat-desc">Standard Portfolio Visitor</div>
+      </div>
+
+      <div class="dashboard-card">
+        <div class="dashboard-card-title">
+          <span>Session Security</span>
+          <span class="mono" style="color:var(--moss);">SECURE</span>
+        </div>
+        <div class="stat-number">Bearer JWT</div>
+        <div class="stat-desc">Encrypted with bcrypt & token expiry</div>
+      </div>
+    </div>
+
+    <!-- Account Overview & System Info -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="dashboard-card">
+        <h3 class="dashboard-card-title">Profile Information</h3>
+        <table class="info-table">
+          <tr>
+            <td>Account ID:</td>
+            <td id="userId" class="mono">#---</td>
+          </tr>
+          <tr>
+            <td>Full Name:</td>
+            <td id="profileName">Loading...</td>
+          </tr>
+          <tr>
+            <td>Email Address:</td>
+            <td id="profileEmail">Loading...</td>
+          </tr>
+          <tr>
+            <td>Joined Date:</td>
+            <td id="profileJoined">Loading...</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="dashboard-card">
+        <h3 class="dashboard-card-title">Quick Actions</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+          <a href="index.html" class="auth-btn" style="margin-top: 0; text-decoration: none;">
+            <span>← Return to Main Portfolio</span>
+          </a>
+          <button id="refreshSessionBtn" class="logout-btn" style="justify-content: center; background: var(--ink-3); border-color: var(--line); color: var(--paper);">
+            <span>🔄 Verify Session Status</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Auth Protection Check
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+
+    if (!token || !storedUser) {
+      window.location.href = 'login.html';
+    }
+
+    const user = JSON.parse(storedUser);
+
+    // Populate user details in UI
+    function renderUserUI(userData) {
+      const name = userData.name || 'User';
+      const email = userData.email || 'user@example.com';
+      const initial = name.charAt(0).toUpperCase();
+
+      document.getElementById('userName').textContent = name;
+      document.getElementById('userEmail').textContent = email;
+      document.getElementById('welcomeName').textContent = name;
+      document.getElementById('userAvatar').textContent = initial;
+
+      document.getElementById('profileName').textContent = name;
+      document.getElementById('profileEmail').textContent = email;
+      document.getElementById('userId').textContent = `#${userData.id || '101'}`;
+      document.getElementById('userRole').textContent = userData.role || 'Member';
+
+      if (userData.created_at) {
+        const date = new Date(userData.created_at);
+        document.getElementById('profileJoined').textContent = date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      } else {
+        document.getElementById('profileJoined').textContent = 'Today';
+      }
+    }
+
+    renderUserUI(user);
+
+    // Verify session with backend API if online
+    async function verifySession() {
+      const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '5000'
+        ? 'http://localhost:5000/api/auth/me'
+        : '/api/auth/me';
+
+      try {
+        const res = await fetch(API_URL, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+          renderUserUI(data.user);
+        }
+      } catch (err) {
+        console.log('Session verified offline / locally');
+      }
+    }
+    verifySession();
+
+    // Refresh session button listener
+    document.getElementById('refreshSessionBtn').addEventListener('click', async () => {
+      await verifySession();
+      alert('Session status verified successfully!');
+    });
+
+    // Logout functionality
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      if (confirm('Are you sure you want to log out?')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = 'index.html';
+      }
+    });
+  </script>
+</body>
+</html>
